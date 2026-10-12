@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FRAP digital editable</title>
+<style>
+:root{--ink:#123e76;--line:#1b4f88}
+*{box-sizing:border-box}
+body{margin:0;background:#e9edf2;font-family:Arial,sans-serif;color:#132f50}
+.toolbar{position:sticky;top:0;z-index:10;display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px;background:#123e76;color:white}
+button{border:0;border-radius:6px;padding:10px 14px;font-weight:700;cursor:pointer}
+.toolbar button{background:white;color:#123e76}
+.note{font-size:12px;opacity:.9}
+.sheet-wrap{padding:18px;display:flex;justify-content:center}
+.sheet{position:relative;width:min(100%,816px);aspect-ratio:962/1536;background:white;box-shadow:0 2px 18px #0003;overflow:hidden}
+.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;pointer-events:none}
+.field{position:absolute;z-index:2;border:0;border-bottom:1px solid #244e7a;background:rgba(255,255,255,.72);color:#102c4c;font:700 clamp(5px,.85vw,10px) Arial;padding:1px 2px;min-width:0;border-radius:0;outline-color:#2475c9}
+.field:focus{background:#fff;box-shadow:0 0 0 1px #2475c9}
+textarea.field{resize:none;line-height:1.2}
+.sig{position:absolute;z-index:3;border:1px dashed #3e6792;background:rgba(255,255,255,.10);touch-action:none;width:22%;height:5.2%;cursor:crosshair}
+.sig canvas{width:100%;height:100%;display:block}
+.sig .clear{position:absolute;right:0;top:0;font-size:9px;padding:2px 4px;background:#fff;color:#123e76;opacity:.8}
+@media(max-width:600px){.sheet-wrap{padding:5px}.toolbar{position:static}.note{width:100%}}
+@page{size:8.5in 13in;margin:0}
+@media print{
+ body{background:white}.toolbar{display:none}.sheet-wrap{padding:0;display:block}.sheet{width:8.5in;height:13in;aspect-ratio:auto;box-shadow:none;page-break-inside:avoid}.field{background:transparent;border-bottom:1px solid transparent;color:#000;font-size:7pt}.sig{border:1px solid transparent;background:transparent}.sig .clear{display:none}
+}
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <button onclick="window.print()">Imprimir / Guardar PDF</button>
+  <button onclick="clearFields()">Limpiar campos</button>
+  <button onclick="clearSignatures()">Borrar firmas</button>
+  <button onclick="saveData()">Guardar datos en este dispositivo</button>
+  <button onclick="loadData()">Recuperar datos guardados</button>
+  <span class="note">Formato de impresión: hoja oficio (8.5 × 13 pulgadas). Los datos se escriben sobre la imagen original.</span>
+</div>
+<div class="sheet-wrap"><main class="sheet" id="sheet">
+<img class="bg" src="frap_original.jpg" alt="Formato FRAP original">
+<!-- Campos superpuestos: posiciones en porcentaje de la imagen original -->
+<input class="field" data-k="unidad" aria-label="Unidad" style="left:32%;top:5.2%;width:15%;height:1.6%">
+<input class="field" data-k="placas" aria-label="Placas" style="left:49.5%;top:5.2%;width:16%;height:1.6%">
+<input class="field" data-k="folio" aria-label="Folio" style="left:72%;top:4.1%;width:20%;height:1.9%">
+<input class="field" data-k="fecha" aria-label="Fecha" placeholder="DD/MM/AAAA" style="left:10%;top:8.7%;width:35%;height:1.8%">
+<input class="field" data-k="solicitud" aria-label="Hora solicitud" placeholder="Solicitud" style="left:4.5%;top:12.6%;width:6%;height:1.1%">
+<input class="field" data-k="salida" aria-label="Hora salida" placeholder="Salida" style="left:10.5%;top:12.6%;width:6%;height:1.1%">
+<input class="field" data-k="llegada" aria-label="Hora llegada" placeholder="Llegada" style="left:16.7%;top:12.6%;width:6%;height:1.1%">
+<input class="field" data-k="inicio" aria-label="Hora inicio" placeholder="Inicio" style="left:23%;top:12.6%;width:6%;height:1.1%">
+<input class="field" data-k="destino1" aria-label="Destino 1" placeholder="Destino 1" style="left:29%;top:12.6%;width:6.5%;height:1.1%">
+<input class="field" data-k="inicio2" aria-label="Inicio 2" placeholder="Inicio 2" style="left:35.5%;top:12.6%;width:6%;height:1.1%">
+<input class="field" data-k="destino2" aria-label="Destino 2" placeholder="Destino 2" style="left:41.5%;top:12.6%;width:5.5%;height:1.1%">
+<input class="field" data-k="operador" aria-label="Operador" style="left:4%;top:15.5%;width:42%;height:1.25%">
+<input class="field" data-k="temp1" aria-label="Paramédico 1" style="left:4%;top:17%;width:42%;height:1.15%">
+<input class="field" data-k="temp2" aria-label="Paramédico 2" style="left:4%;top:18.2%;width:42%;height:1.15%">
+<input class="field" data-k="medico" aria-label="Médico" style="left:4%;top:19.5%;width:28%;height:1.15%">
+<input class="field" data-k="cedula" aria-label="Cédula" style="left:33%;top:19.5%;width:13%;height:1.15%">
+<input class="field" data-k="ubicacion" aria-label="Ubicación del servicio" style="left:4%;top:20.7%;width:42%;height:1.2%">
+<input class="field" data-k="antecedentes" aria-label="Antecedentes patológicos" style="left:48%;top:7.6%;width:46%;height:5.7%">
+<input class="field" data-k="alergias" aria-label="Alergias" style="left:48%;top:13.3%;width:46%;height:1.25%">
+<input class="field" data-k="medicamentos" aria-label="Medicamentos" style="left:48%;top:14.5%;width:46%;height:1.25%">
+<input class="field" data-k="cirugias" aria-label="Cirugías recientes" style="left:48%;top:17.2%;width:46%;height:1.5%">
+<input class="field" data-k="otros" aria-label="Otros procedimientos" style="left:48%;top:20.7%;width:46%;height:1.4%">
+<input class="field" data-k="paciente" aria-label="Nombre o media filiación" style="left:4%;top:23.2%;width:42%;height:1.3%">
+<input class="field" data-k="edad" aria-label="Edad" style="left:36%;top:24.2%;width:10%;height:1.2%">
+<input class="field" data-k="domicilio" aria-label="Domicilio" style="left:4%;top:25.7%;width:42%;height:2.5%">
+<input class="field" data-k="sexo" aria-label="Sexo" style="left:32%;top:29.4%;width:14%;height:1.1%">
+<input class="field" data-k="derechohabiencia" aria-label="Derechohabiencia" style="left:4%;top:30.7%;width:42%;height:1.1%">
+<input class="field" data-k="seguro" aria-label="Seguro médico" style="left:4%;top:32%;width:42%;height:1.1%">
+<input class="field" data-k="responsable" aria-label="Responsable" style="left:4%;top:33.2%;width:42%;height:1.1%">
+<input class="field" data-k="parentesco" aria-label="Parentesco" style="left:4%;top:34.4%;width:42%;height:1.1%">
+<input class="field" data-k="telefono" aria-label="Teléfono" style="left:4%;top:35.6%;width:42%;height:1.1%">
+<input class="field" data-k="triage" aria-label="Prioridad de atención triage" style="left:23%;top:37.2%;width:23%;height:1.1%">
+<input class="field" data-k="conciencia" aria-label="Estado de conciencia" style="left:23%;top:38.5%;width:23%;height:1.1%">
+<input class="field" data-k="glasgow" aria-label="Glasgow" style="left:34%;top:51.4%;width:10%;height:1.2%">
+<input class="field" data-k="signos" aria-label="Signos vitales: hora, FC, FR, TA, temperatura, SpO2, glucemia" placeholder="Hora | FC | FR | TA | Temp | SpO2 | Glucemia" style="left:4%;top:55.7%;width:42%;height:4.1%">
+<input class="field" data-k="causa" aria-label="Causa de atención" style="left:30%;top:60.1%;width:16%;height:1.1%">
+<textarea class="field" data-k="descripcion" aria-label="Descripción" style="left:4%;top:61.8%;width:42%;height:7.2%"></textarea>
+<input class="field" data-k="farmacos" aria-label="Fármacos administrados" style="left:48%;top:23.5%;width:46%;height:3.4%">
+<input class="field" data-k="soluciones" aria-label="Soluciones administradas" style="left:48%;top:27.2%;width:46%;height:3.4%">
+<input class="field" data-k="recepcion" aria-label="Datos recepción paciente" style="left:48%;top:31.8%;width:46%;height:4.4%">
+<input class="field" data-k="aseguradora" aria-label="Datos de aseguradora" style="left:48%;top:37.3%;width:46%;height:7.2%">
+<textarea class="field" data-k="aceptacion" aria-label="Declaración de aceptación" style="left:49%;top:45.1%;width:44%;height:7.3%"></textarea>
+<textarea class="field" data-k="rechazo" aria-label="Declaración de rechazo" style="left:49%;top:56.1%;width:44%;height:5.3%"></textarea>
+<input class="field" data-k="entrega" aria-label="Nombre de quien entrega paciente" style="left:49%;top:70.5%;width:21%;height:1.5%">
+<input class="field" data-k="recibe" aria-label="Nombre, firma y cédula de quien recibe paciente" style="left:73%;top:70.5%;width:21%;height:1.5%">
+<input class="field" data-k="sello" aria-label="Sello institución receptora" style="left:49%;top:72.5%;width:45%;height:10%">
+<input class="field" data-k="tipo_traslado" aria-label="Tipo de traslado" style="left:49%;top:83.2%;width:45%;height:1.3%">
+<input class="field" data-k="precio" aria-label="Precio" style="left:49%;top:84.5%;width:45%;height:1.3%">
+<textarea class="field" data-k="comentarios" aria-label="Comentarios" style="left:49%;top:85.8%;width:45%;height:4.2%"></textarea>
+<!-- Firmas dibujables con dedo o mouse -->
+<div class="sig" data-sig="aceptacion" aria-label="Firma de aceptación" style="left:49%;top:52.4%;width:44%;height:3.5%"><canvas></canvas><button class="clear" type="button">Borrar</button></div>
+<div class="sig" data-sig="rechazo" aria-label="Firma de rechazo" style="left:49%;top:61.8%;width:44%;height:3.5%"><canvas></canvas><button class="clear" type="button">Borrar</button></div>
+<div class="sig" data-sig="entrega" aria-label="Firma entrega paciente" style="left:49%;top:65.2%;width:21%;height:4.4%"><canvas></canvas><button class="clear" type="button">Borrar</button></div>
+<div class="sig" data-sig="recibe" aria-label="Firma recibe paciente" style="left:73%;top:65.2%;width:21%;height:4.4%"><canvas></canvas><button class="clear" type="button">Borrar</button></div>
+</main></div>
+<script>
+const fields=[...document.querySelectorAll('[data-k]')];
+function clearFields(){if(confirm('¿Borrar todos los campos de texto?')) fields.forEach(e=>e.value='')}
+function saveData(){const data={};fields.forEach(e=>data[e.dataset.k]=e.value);document.querySelectorAll('.sig').forEach(s=>data['sig_'+s.dataset.sig]=s.querySelector('canvas').toDataURL());localStorage.setItem('frapDigitalData',JSON.stringify(data));alert('Datos guardados en este dispositivo y navegador.')}
+function loadData(){const raw=localStorage.getItem('frapDigitalData');if(!raw){alert('No hay datos guardados en este navegador.');return}const d=JSON.parse(raw);fields.forEach(e=>{if(d[e.dataset.k]!==undefined)e.value=d[e.dataset.k]});document.querySelectorAll('.sig').forEach(s=>{const u=d['sig_'+s.dataset.sig];if(u){const im=new Image();im.onload=()=>{const c=s.querySelector('canvas');c.getContext('2d').drawImage(im,0,0,c.width,c.height)};im.src=u}})}
+function clearSignatures(){document.querySelectorAll('.sig canvas').forEach(c=>c.getContext('2d').clearRect(0,0,c.width,c.height))}
+function setupCanvas(box){
+ const c=box.querySelector('canvas'),ctx=c.getContext('2d');let drawing=false;
+ function resize(){const r=box.getBoundingClientRect(),d=window.devicePixelRatio||1;const old=c.toDataURL();c.width=Math.max(1,Math.round(r.width*d));c.height=Math.max(1,Math.round(r.height*d));ctx.setTransform(d,0,0,d,0,0);ctx.lineWidth=2;ctx.lineCap='round';ctx.lineJoin='round';}
+ resize();window.addEventListener('resize',resize);
+ function pos(e){const r=c.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top}}
+ c.addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;drawing=true;c.setPointerCapture(e.pointerId);const p=pos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);e.preventDefault()});
+ c.addEventListener('pointermove',e=>{if(!drawing)return;const p=pos(e);ctx.lineTo(p.x,p.y);ctx.stroke();e.preventDefault()});
+ c.addEventListener('pointerup',()=>drawing=false);c.addEventListener('pointercancel',()=>drawing=false);
+ box.querySelector('.clear').addEventListener('click',e=>{e.stopPropagation();ctx.clearRect(0,0,c.width,c.height)});
+}
+document.querySelectorAll('.sig').forEach(setupCanvas);
+</script>
+</body></html>
